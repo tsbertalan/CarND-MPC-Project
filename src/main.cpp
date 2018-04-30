@@ -128,7 +128,8 @@ int main() {
                     * Both are in between [-1, 1].
                     *
                     */
-                    auto vars = mpc.Solve(state, coeffs);
+                    auto result = mpc.Solve(state, coeffs);
+                    auto vars = result.variables;
                     double steer_value = -vars[6] / deg2rad(25.0);
                     double throttle_value = max(vars[7], 0.0);
 
@@ -142,8 +143,8 @@ int main() {
                     msgJson["throttle"] = throttle_value;
 
                     //Display the MPC predicted trajectory
-                    vector<double> mpc_x_vals;
-                    vector<double> mpc_y_vals;
+                    vector<double> mpc_x_vals = result.xpath;
+                    vector<double> mpc_y_vals = result.ypath;
 
                     //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
                     // the points in the simulator are connected by a Green line
@@ -152,8 +153,8 @@ int main() {
                     msgJson["mpc_y"] = mpc_y_vals;
 
                     //Display the waypoints/reference line
-                    vector<double> next_x_vals;
-                    vector<double> next_y_vals;
+                    vector<double> next_x_vals = ptsx;
+                    vector<double> next_y_vals = ptsy;
 
                     //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
                     // the points in the simulator are connected by a Yellow line
