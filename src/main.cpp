@@ -1,4 +1,5 @@
 #include <math.h>
+#include <algorithm>  // std::min, std::max
 #include <uWS/uWS.h>
 #include <chrono>
 #include <iostream>
@@ -8,6 +9,8 @@
 #include "Eigen-3.3/Eigen/QR"
 #include "MPC.h"
 #include "json.hpp"
+
+#define poly_order 3
 
 // for convenience
 using json = nlohmann::json;
@@ -94,14 +97,43 @@ int main() {
                     double psi = j[1]["psi"];
                     double v = j[1]["speed"];
 
+                    Eigen::VectorXd ptsx_v(ptsx.size());
+                    Eigen::VectorXd ptsy_v(ptsy.size());
+
+                    ptsx_v.fill(0);
+                    ptsy_v.fill(0);
+
+                    for(unsigned int i=0; i<ptsx.size(); i++) {
+                        ptsx_v[i] = ptsx[i];
+                    }
+                    for(unsigned int i=0; i<ptsy.size(); i++) {
+                        ptsy_v[i] = ptsy[i];
+                    }
+
+                    // Fit a polynomial to the above x and y coordinates
+                    auto coeffs = polyfit(ptsx_v, ptsy_v, std::min((int) ptsx.size()-1, poly_order));
+
+                    // I feel like on of these two needs a minus sign.
+                    // calculate the cross track error
+                    double cte = polyeval(coeffs, px) - py;
+                    // calculate the orientation error
+                    double epsi = psi - atan(coeffs[1]);
+
+                    Eigen::VectorXd state(6);
+                    state << px, py, psi, v, cte, epsi;
+
                     /*
-                    * TODO: Calculate steering angle and throttle using MPC.
+                    * Calculate steering angle and throttle using MPC.
                     *
                     * Both are in between [-1, 1].
                     *
                     */
-                    double steer_value;
-                    double throttle_value;
+                    auto vars = mpc.Solve(state, coeffs);
+                    double steer_value = -vars[6] / deg2rad(25.0);
+                    double throttle_value = max(vars[7], 0.0);
+
+                    std::cout << "steer:    " << steer_value << std::endl;
+                    std::cout << "throttle: " << throttle_value << std::endl;
 
                     json msgJson;
                     // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.

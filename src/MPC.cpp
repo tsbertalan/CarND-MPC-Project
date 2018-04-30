@@ -11,7 +11,7 @@ double dt = 0.05;
 
 // NOTE: feel free to play around with this
 // or do something completely different
-double ref_v = 40;
+double ref_v = 10;
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
@@ -67,7 +67,7 @@ public:
         // Reference State Cost
         // Define the cost related the reference state and
         // any anything you think may be beneficial.
-        for (int t = 0; t < N; t++) {
+        for (unsigned int t = 0; t < N; t++) {
             // Minimize the CTE.
             fg[0] += CppAD::pow(vars[cte_start + t], 2);
 
@@ -112,7 +112,7 @@ public:
         fg[1 + epsi_start] = vars[epsi_start];
 
         // The rest of the constraints
-        for (int t = 1; t < N; t++) {
+        for (unsigned int t = 1; t < N; t++) {
             AD<double> x0 = vars[x_start + t - 1];
             AD<double> x1 = vars[x_start + t];
 
@@ -173,7 +173,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
 // (State is (x, y, psi, v, cte, epsi) and actuators is (d, a).
     size_t n_vars = 6 * N + 2 * (N - 1);
     // Set the number of constraints
-    size_t n_constraints = 0;
+    size_t n_constraints = N * 6;
 
     double x = state[0];
     double y = state[1];
@@ -185,7 +185,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     // Initial value of the independent variables.
     // SHOULD BE 0 besides initial state.
     Dvector vars(n_vars);
-    for (int i = 0; i < n_vars; i++) {
+    for (i = 0; i < n_vars; i++) {
         vars[i] = 0;
     }
 
@@ -195,7 +195,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
 
     // Set all non-actuators upper and lowerlimits
     // to the max negative and positive values.
-    for (int i = 0; i < delta_start; i++) {
+    for (i = 0; i < delta_start; i++) {
         vars_lowerbound[i] = -1.0e19;
         vars_upperbound[i] = 1.0e19;
     }
@@ -203,14 +203,14 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     // The upper and lower limits of delta are set to -25 and 25
     // degrees (values in radians).
     // NOTE: Feel free to change this to something else.
-    for (int i = delta_start; i < a_start; i++) {
+    for (i = delta_start; i < a_start; i++) {
         vars_lowerbound[i] = -0.436332;
         vars_upperbound[i] = 0.436332;
     }
 
     // Acceleration/decceleration upper and lower limits.
     // NOTE: Feel free to change this to something else.
-    for (int i = a_start; i < n_vars; i++) {
+    for (i = a_start; i < n_vars; i++) {
         vars_lowerbound[i] = -1.0;
         vars_upperbound[i] = 1.0;
     }
@@ -219,7 +219,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     // Should be 0 besides initial state.
     Dvector constraints_lowerbound(n_constraints);
     Dvector constraints_upperbound(n_constraints);
-    for (int i = 0; i < n_constraints; i++) {
+    for (i = 0; i < n_constraints; i++) {
         constraints_lowerbound[i] = 0;
         constraints_upperbound[i] = 0;
     }
