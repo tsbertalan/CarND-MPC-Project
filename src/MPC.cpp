@@ -4,6 +4,8 @@
 #include "Eigen-3.3/Eigen/Core"
 
 using CppAD::AD;
+using std::cout;
+using std::cout;
 
 // Set the timestep length and duration
 size_t N = 6;
@@ -12,6 +14,14 @@ double dt = 0.15;
 // NOTE: feel free to play around with this
 // or do something completely different
 double ref_v = 50;
+
+double scale_cte = 1e-1;
+double scale_epsi = 1e1;
+double scale_v = 5e-2;
+double scale_delta = 1e2;
+double scale_a = 1e-1;
+double scale_ddelta = 1e1;
+double scale_da = 1e0;
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
@@ -81,23 +91,32 @@ public:
         // any anything you think may be beneficial.
         for (unsigned int t = 0; t < N; t++) {
             // Minimize the CTE.
-            fg[0] += 400 * CppAD::pow(vars[cte_start + t], 2);
+            // Typical unscaled value is ~ 1e2;
+            fg[0] += scale_cte * CppAD::pow(vars[cte_start + t], 2);
 
             // Minimize the angular error.
-            fg[0] += CppAD::pow(vars[epsi_start + t], 2);
+            // Typical unscaled value is ~ 1e-5;
+            fg[0] += scale_epsi * CppAD::pow(vars[epsi_start + t], 2);
 
             // Minimize the difference from reference velocity.
-            fg[0] += CppAD::pow(vars[v_start + t] - ref_v, 2);
+            // Typical unscaled value is ~ 1e3;
+            fg[0] += scale_v * CppAD::pow(vars[v_start + t] - ref_v, 2);
 
             if (t < N - 1) {
                 // Minimize the control actions.
-                fg[0] += CppAD::pow(vars[delta_start + t], 2);
-                fg[0] += CppAD::pow(vars[a_start + t], 2);
+                // Typical unscaled value is ~ 1e-5;
+                fg[0] += scale_delta * CppAD::pow(vars[delta_start + t], 2);
+
+                // Typical unscaled value is ~ 1e-2;
+                fg[0] += scale_a * CppAD::pow(vars[a_start + t], 2);
 
                 if (t < N - 2) {
                     // Minimize the abruptness of control action changes.
-                    fg[0] += 1 * CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
-                    fg[0] += CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
+                    // Typical unscaled value is ~ 1e-5;
+                    fg[0] += scale_ddelta * CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
+
+                    // Typical unscaled value is ~ 1e-3;
+                    fg[0] += scale_da * CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
                 }
             }
 
@@ -169,6 +188,11 @@ public:
     }
 };
 
+
+void psquared(double x, std::string name) {
+    cout << name << "^2 = " << pow(x, 2) << endl;
+}
+
 //
 // MPC class definition implementation.
 //
@@ -195,8 +219,6 @@ MPC_Solution MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     double cte = state[4];
     double epsi = state[5];
 
-
-
     // Initial value of the independent variables.
     // SHOULD BE 0 besides initial state.
     Dvector vars(n_vars);
@@ -208,7 +230,7 @@ MPC_Solution MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     Dvector vars_lowerbound(n_vars);
     Dvector vars_upperbound(n_vars);
 
-    // Set all non-actuators upper and lowerlimits
+    // Set all non-actuators upper and lower limits
     // to the max negative and positive values.
     for (i = 0; i < delta_start; i++) {
         vars_lowerbound[i] = -1.0e19;
@@ -223,7 +245,7 @@ MPC_Solution MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
         vars_upperbound[i] = 0.436332;
     }
 
-    // Acceleration/decceleration upper and lower limits.
+    // Acceleration/deceleration upper and lower limits.
     // NOTE: Feel free to change this to something else.
     for (i = a_start; i < n_vars; i++) {
         vars_lowerbound[i] = -1.0;
@@ -238,6 +260,8 @@ MPC_Solution MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
         constraints_lowerbound[i] = 0;
         constraints_upperbound[i] = 0;
     }
+
+    // Initial state.
     constraints_lowerbound[x_start] = x;
     constraints_lowerbound[y_start] = y;
     constraints_lowerbound[psi_start] = psi;
@@ -286,19 +310,33 @@ MPC_Solution MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
 
     // Cost
 //    auto cost = solution.obj_value;
-//    std::cout << "Cost " << cost << std::endl;
+//    cout << "Cost " << cost << cout;
 
     // Return the first actuator values. The variables can be accessed with
 
+//    // Print some parts of the objective.
+    cout << endl << "Objective Components:" << endl;
+    psquared(cte, "cte");
+    psquared(epsi, "epsi");
+    psquared(v-ref_v, "(v-ref_v)");
+
+    psquared(solution.x[delta_start], "d");
+    psquared(solution.x[a_start], "a");
+
+    double dd = solution.x[delta_start+1] - solution.x[delta_start];
+    psquared(dd, "dd");
+    double da = solution.x[a_start+1] - solution.x[a_start];
+    psquared(da, "da");
+
 
     MPC_Solution result;
-    result.variables = {solution.x[x_start + 1], solution.x[y_start + 1],
-                        solution.x[psi_start + 1], solution.x[v_start + 1],
-                        solution.x[cte_start + 1], solution.x[epsi_start + 1],
+    result.variables = {solution.x[x_start], solution.x[y_start],
+                        solution.x[psi_start], solution.x[v_start],
+                        solution.x[cte_start], solution.x[epsi_start],
                         solution.x[delta_start], solution.x[a_start]};
     for(i=0; i<N-1; i++) {
-        double x_vehicle = solution.x[x_start+1+i];
-        double y_vehicle = solution.x[y_start+1+i];
+        double x_vehicle = solution.x[x_start+i];
+        double y_vehicle = solution.x[y_start+i];
         result.path.x.push_back(x_vehicle);
         result.path.y.push_back(y_vehicle);
 
