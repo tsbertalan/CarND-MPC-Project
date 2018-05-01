@@ -18,12 +18,12 @@ double ref_v = 60;
 double scale_cte = 1e-2;
 double scale_epsi = 1e1;
 double scale_v = 8e-3;
-double scale_delta = 1e0;
+double scale_delta = 1e-2;
 double scale_a = 1e-1;
-double scale_ddelta = 1e1;
+double scale_ddelta = 1e-2;
 double scale_da = 1e0;
 
-std::string print_level = "3";
+std::string print_level = "0";
 
 #define DEBUG true
 
@@ -123,8 +123,6 @@ public:
                     fg[0] += scale_da * CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
                 }
             }
-
-
         }
 
 
