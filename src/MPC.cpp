@@ -13,15 +13,19 @@ double dt = 0.15;
 
 // NOTE: feel free to play around with this
 // or do something completely different
-double ref_v = 50;
+double ref_v = 60;
 
-double scale_cte = 1e-1;
+double scale_cte = 1e-2;
 double scale_epsi = 1e1;
-double scale_v = 5e-2;
-double scale_delta = 1e2;
+double scale_v = 8e-3;
+double scale_delta = 1e0;
 double scale_a = 1e-1;
 double scale_ddelta = 1e1;
 double scale_da = 1e0;
+
+std::string print_level = "3";
+
+#define DEBUG true
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
@@ -189,8 +193,13 @@ public:
 };
 
 
-void psquared(double x, std::string name) {
-    cout << name << "^2 = " << pow(x, 2) << endl;
+void psquared(double x, std::string name, double scale=1.0) {
+    cout << name << "^2 ";
+    if(scale != 1.0) {
+        cout << "* " << scale << " ";
+    }
+    cout << "= ";
+    cout << scale * pow(x, 2) << endl;
 }
 
 //
@@ -285,7 +294,7 @@ MPC_Solution MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     // options for IPOPT solver
     std::string options;
     // Uncomment this if you'd like more print information
-    options += "Integer print_level  0\n";
+    options += "Integer print_level  " + print_level + "\n";
     // NOTE: Setting sparse to true allows the solver to take advantage
     // of sparse routines, this makes the computation MUCH FASTER. If you
     // can uncomment 1 of these and see if it makes a difference or not but
@@ -314,19 +323,21 @@ MPC_Solution MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
 
     // Return the first actuator values. The variables can be accessed with
 
-//    // Print some parts of the objective.
-    cout << endl << "Objective Components:" << endl;
-    psquared(cte, "cte");
-    psquared(epsi, "epsi");
-    psquared(v-ref_v, "(v-ref_v)");
+    // Print some parts of the objective.
+    if(DEBUG) {
+        cout << endl << "Objective Components:" << endl;
+        psquared(cte, "cte", scale_cte);
+        psquared(epsi, "epsi", scale_epsi);
+        psquared(v-ref_v, "(v-ref_v)", scale_v);
 
-    psquared(solution.x[delta_start], "d");
-    psquared(solution.x[a_start], "a");
+        psquared(solution.x[delta_start], "d", scale_delta);
+        psquared(solution.x[a_start], "a", scale_a);
 
-    double dd = solution.x[delta_start+1] - solution.x[delta_start];
-    psquared(dd, "dd");
-    double da = solution.x[a_start+1] - solution.x[a_start];
-    psquared(da, "da");
+        double dd = solution.x[delta_start+1] - solution.x[delta_start];
+        psquared(dd, "dd", scale_ddelta);
+        double da = solution.x[a_start+1] - solution.x[a_start];
+        psquared(da, "da", scale_da);
+    }
 
 
     MPC_Solution result;
