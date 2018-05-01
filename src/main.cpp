@@ -211,21 +211,21 @@ int main() {
 
                     //Display the MPC predicted trajectory
                     //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
-                    // the points in the simulator are connected by a Green line
-//                    vector<double> mpc_x_vals = result.path.x;
-//                    vector<double> mpc_y_vals = result.path.y;
-                    vector<double> mpc_x_vals = result.fit.x;
-                    vector<double> mpc_y_vals = result.fit.y;
+                    // the points in the simulator are connected by a green line
+                    vector<double> mpc_x_vals = result.path.x;
+                    vector<double> mpc_y_vals = result.path.y;
+//                    vector<double> mpc_x_vals = result.fit.x;
+//                    vector<double> mpc_y_vals = result.fit.y;
                     msgJson["mpc_x"] = mpc_x_vals;
                     msgJson["mpc_y"] = mpc_y_vals;
 
                     //Display the waypoints/reference line
                     //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
-                    // the points in the simulator are connected by a Yellow line
-//                    vector<double> next_x_vals = result.fit.x;
-//                    vector<double> next_y_vals = result.fit.y;
-                    vector<double> next_x_vals = ptsx_vehicle;
-                    vector<double> next_y_vals = ptsy_vehicle;
+                    // the points in the simulator are connected by a yellow line
+                    vector<double> next_x_vals = result.fit.x;
+                    vector<double> next_y_vals = result.fit.y;
+//                    vector<double> next_x_vals = ptsx_vehicle;
+//                    vector<double> next_y_vals = ptsy_vehicle;
                     msgJson["next_x"] = next_x_vals;
                     msgJson["next_y"] = next_y_vals;
 

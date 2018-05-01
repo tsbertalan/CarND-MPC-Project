@@ -6,12 +6,12 @@
 using CppAD::AD;
 
 // Set the timestep length and duration
-size_t N = 12;
-double dt = 0.1;
+size_t N = 6;
+double dt = 0.15;
 
 // NOTE: feel free to play around with this
 // or do something completely different
-double ref_v = 6;
+double ref_v = 50;
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
@@ -81,7 +81,7 @@ public:
         // any anything you think may be beneficial.
         for (unsigned int t = 0; t < N; t++) {
             // Minimize the CTE.
-            fg[0] += CppAD::pow(vars[cte_start + t], 2);
+            fg[0] += 400 * CppAD::pow(vars[cte_start + t], 2);
 
             // Minimize the angular error.
             fg[0] += CppAD::pow(vars[epsi_start + t], 2);
@@ -96,7 +96,7 @@ public:
 
                 if (t < N - 2) {
                     // Minimize the abruptness of control action changes.
-                    fg[0] += 100 * CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
+                    fg[0] += 1 * CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
                     fg[0] += CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
                 }
             }
@@ -187,9 +187,10 @@ MPC_Solution MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     // Set the number of constraints
     size_t n_constraints = N * 6;
 
-    double x = state[0];
-//    double y = state[1];
-//    double psi = state[2];
+    double x = 0;//state[0];
+    double y = 0;//state[1];
+    double psi = 0;//state[2];
+
     double v = state[3];
     double cte = state[4];
     double epsi = state[5];
@@ -237,16 +238,16 @@ MPC_Solution MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
         constraints_lowerbound[i] = 0;
         constraints_upperbound[i] = 0;
     }
-    constraints_lowerbound[x_start] = 0;
-    constraints_lowerbound[y_start] = 0;
-    constraints_lowerbound[psi_start] = 0;
+    constraints_lowerbound[x_start] = x;
+    constraints_lowerbound[y_start] = y;
+    constraints_lowerbound[psi_start] = psi;
     constraints_lowerbound[v_start] = v;
     constraints_lowerbound[cte_start] = cte;
     constraints_lowerbound[epsi_start] = epsi;
 
-    constraints_upperbound[x_start] = 0;
-    constraints_upperbound[y_start] = 0;
-    constraints_upperbound[psi_start] = 0;
+    constraints_upperbound[x_start] = x;
+    constraints_upperbound[y_start] = y;
+    constraints_upperbound[psi_start] = psi;
     constraints_upperbound[v_start] = v;
     constraints_upperbound[cte_start] = cte;
     constraints_upperbound[epsi_start] = epsi;
@@ -302,7 +303,7 @@ MPC_Solution MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
         result.path.y.push_back(y_vehicle);
 
         double x_fit = x_vehicle;
-        double y_fit = polyeval(coeffs, x);
+        double y_fit = polyeval(coeffs, x_fit);
         result.fit.x.push_back(x_fit);
         result.fit.y.push_back(y_fit);
     }
