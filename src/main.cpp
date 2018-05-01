@@ -22,6 +22,72 @@ double deg2rad(double x) { return x * pi() / 180; }
 
 double rad2deg(double x) { return x * 180 / pi(); }
 
+
+// Return a duple.
+struct Pair {
+    double x;
+    double y;
+};
+
+
+void print_vector(vector<double> v, std::string name) {
+    std::cout << name << " = [";
+    for(auto x : v) {
+        std::cout << x << ", ";
+    }
+    std::cout << "]" << std::endl;
+}
+
+void print_matrix(Eigen::MatrixXd m, std::string name) {
+    std::cout << name << " = [" << endl;
+    for(unsigned int i=0; i<m.rows(); i++) {
+        for(unsigned int j=0; j<m.cols(); j++) {
+            std::cout << m(i, j) << ", ";
+        }
+        std::cout << std::endl;
+    }
+    std::cout << "]" << std::endl;
+}
+
+
+// Wrap a rotation+translation in a nice class.
+class Transformation_Matrix {
+private:
+    Eigen::Matrix<double, 3, 3> A;
+    double theta, xt, yt;
+
+public:
+    Transformation_Matrix(double theta, double xt, double yt) {
+        this->theta = theta;
+        this->xt = xt;
+        this->yt = yt;
+
+        double c = cos(theta);
+        double s = sin(theta);
+        A << c,-s, xt,
+            s, c, yt,
+            0, 0, 1;
+    }
+
+    Pair operator()(double xa, double ya) {
+        Eigen::Matrix<double, 3, 1> XA;
+        XA << xa, ya, 1;
+        auto XB = A * XA;
+        Pair result;
+        result.x = XB(0, 0);
+        result.y = XB(1, 0);
+        return result;
+    }
+
+    Transformation_Matrix inverse() {
+        // Derived by inverting A with Mathematica.
+        double xr = -xt * cos(theta) - yt * sin(theta);
+        double yr =  xt * sin(theta) - yt * cos(theta);
+        return Transformation_Matrix(-theta, xr, yr);
+    }
+};
+
+
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
 // else the empty string "" will be returned.
@@ -36,6 +102,7 @@ string hasData(string s) {
     }
     return "";
 }
+
 
 // Fit a polynomial.
 // Adapted from
@@ -61,13 +128,9 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
     return result;
 }
 
-void print_vector(vector<double> v, std::string name) {
-    std::cout << name << " = [";
-    for(auto x : v) {
-        std::cout << x << ", ";
-    }
-    std::cout << "]" << std::endl;
-}
+
+
+
 
 int main() {
     uWS::Hub h;
@@ -95,30 +158,39 @@ int main() {
                     double psi = j[1]["psi"];
                     double v = j[1]["speed"];
 
+                    Transformation_Matrix vehicle2map(psi, px, py);
+                    Transformation_Matrix map2vehicle = vehicle2map.inverse();
+
                     Eigen::VectorXd ptsx_v(ptsx.size());
                     Eigen::VectorXd ptsy_v(ptsy.size());
 
                     ptsx_v.fill(0);
                     ptsy_v.fill(0);
+                    vector<double> ptsx_vehicle, ptsy_vehicle;
 
                     for(unsigned int i=0; i<ptsx.size(); i++) {
-                        ptsx_v[i] = ptsx[i];
-                    }
-                    for(unsigned int i=0; i<ptsy.size(); i++) {
-                        ptsy_v[i] = ptsy[i];
+                        Pair polyxy = map2vehicle(ptsx[i], ptsy[i]);
+                        ptsx_v[i] = polyxy.x;
+                        ptsy_v[i] = polyxy.y;
+                        ptsx_vehicle.push_back(polyxy.x);
+                        ptsy_vehicle.push_back(polyxy.y);
                     }
 
                     // Fit a polynomial to the above x and y coordinates
                     auto coeffs = polyfit(ptsx_v, ptsy_v, std::min((int) ptsx.size()-1, poly_order));
 
-                    // I feel like on of these two needs a minus sign.
                     // calculate the cross track error
-                    double cte = polyeval(coeffs, px) - py;
+                    // Negative sign is here because if the poly evaluates positive, our y coordinate (0) is too small.
+                    double cte = -polyeval(coeffs, px);
                     // calculate the orientation error
-                    double epsi = psi - atan(coeffs[1]);
+                    // Negative sign is here because if slope is positive, angle is positive,
+                    // and our angle of 0 radians is too small.
+                    double epsi = -atan(coeffs[1]);
 
+                    // First three state values (x, y, psi) are all zero because we're considering MPC solutions
+                    // that start from the car's position in its own coordinate frame.
                     Eigen::VectorXd state(6);
-                    state << px, py, psi, v, cte, epsi;
+                    state << 0, 0, 0, v, cte, epsi;
 
                     /*
                     * Calculate steering angle and throttle using MPC.
@@ -138,29 +210,22 @@ int main() {
                     msgJson["throttle"] = throttle_value;
 
                     //Display the MPC predicted trajectory
-                    // This is the green line.
-                    vector<double> mpc_x_vals = result.path.x;
-                    vector<double> mpc_y_vals = result.path.y;
-                    print_vector(mpc_x_vals, "mpc_x_vals");
-
                     //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
                     // the points in the simulator are connected by a Green line
-
+//                    vector<double> mpc_x_vals = result.path.x;
+//                    vector<double> mpc_y_vals = result.path.y;
+                    vector<double> mpc_x_vals = result.fit.x;
+                    vector<double> mpc_y_vals = result.fit.y;
                     msgJson["mpc_x"] = mpc_x_vals;
                     msgJson["mpc_y"] = mpc_y_vals;
 
                     //Display the waypoints/reference line
-                    // This is the yellow line.
-                    vector<double> next_x_vals = result.fit.x;
-                    vector<double> next_y_vals = result.fit.y;
-//                    vector<double> next_x_vals = ptsx;
-//                    vector<double> next_y_vals = ptsy;
-
-                    print_vector(next_x_vals, "next_x_vals");
-
                     //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
                     // the points in the simulator are connected by a Yellow line
-
+//                    vector<double> next_x_vals = result.fit.x;
+//                    vector<double> next_y_vals = result.fit.y;
+                    vector<double> next_x_vals = ptsx_vehicle;
+                    vector<double> next_y_vals = ptsy_vehicle;
                     msgJson["next_x"] = next_x_vals;
                     msgJson["next_y"] = next_y_vals;
 
@@ -175,7 +240,7 @@ int main() {
                     //
                     // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
                     // SUBMITTING.
-                    this_thread::sleep_for(chrono::milliseconds(100));
+                    this_thread::sleep_for(chrono::milliseconds(0));
                     ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
                 }
             } else {

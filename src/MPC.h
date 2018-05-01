@@ -6,15 +6,12 @@
 
 using namespace std;
 
+
 struct XYPath {
     vector<double> x;
     vector<double> y;
 };
 
-struct Pair {
-    double x;
-    double y;
-};
 
 struct MPC_Solution {
     vector<double> variables;
@@ -22,7 +19,9 @@ struct MPC_Solution {
     XYPath fit;
 };
 
+
 double polyeval(Eigen::VectorXd coeffs, double x);
+
 
 class MPC {
 public:

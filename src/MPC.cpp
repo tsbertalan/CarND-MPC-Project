@@ -2,17 +2,16 @@
 #include <cppad/cppad.hpp>
 #include <cppad/ipopt/solve.hpp>
 #include "Eigen-3.3/Eigen/Core"
-#include <cmath>
 
 using CppAD::AD;
 
 // Set the timestep length and duration
-size_t N = 25;
-double dt = 0.05;
+size_t N = 12;
+double dt = 0.1;
 
 // NOTE: feel free to play around with this
 // or do something completely different
-double ref_v = 10;
+double ref_v = 6;
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
@@ -28,33 +27,6 @@ size_t a_start = delta_start + N - 1;
 
 
 
-class Transformation_Matrix {
-private:
-    Eigen::Matrix<double, 3, 3> A;
-    double theta, xt, yt;
-
-public:
-    Transformation_Matrix(double theta, double xt, double yt) {
-        this->theta = theta;
-        this->xt = xt;
-        this->yt = yt;
-
-        double c = std::cos(theta);
-        double s = std::sin(theta);
-        A << c,-s, xt,
-             s, c, yt,
-             0, 0, 1;
-    }
-
-    Pair operator()(double xa, double ya) {
-        Eigen::Matrix<double, 3, 1> XA;
-        XA << xa, ya, 1;
-        auto XB = A * XA;
-        Pair result;
-        result.x = XB[0, 1];
-        result.y = XB[1, 1];
-    }
-};
 
 
 // This value assumes the model presented in the classroom is used.
@@ -216,13 +188,13 @@ MPC_Solution MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     size_t n_constraints = N * 6;
 
     double x = state[0];
-    double y = state[1];
-    double psi = state[2];
+//    double y = state[1];
+//    double psi = state[2];
     double v = state[3];
     double cte = state[4];
     double epsi = state[5];
 
-    Transformation_Matrix transformation(-psi, -x, -y);
+
 
     // Initial value of the independent variables.
     // SHOULD BE 0 besides initial state.
@@ -312,8 +284,8 @@ MPC_Solution MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     ok &= solution.status == CppAD::ipopt::solve_result<Dvector>::success;
 
     // Cost
-    auto cost = solution.obj_value;
-    std::cout << "Cost " << cost << std::endl;
+//    auto cost = solution.obj_value;
+//    std::cout << "Cost " << cost << std::endl;
 
     // Return the first actuator values. The variables can be accessed with
 
@@ -326,12 +298,13 @@ MPC_Solution MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     for(i=0; i<N-1; i++) {
         double x_vehicle = solution.x[x_start+1+i];
         double y_vehicle = solution.x[y_start+1+i];
+        result.path.x.push_back(x_vehicle);
+        result.path.y.push_back(y_vehicle);
+
         double x_fit = x_vehicle;
         double y_fit = polyeval(coeffs, x);
-        result.path.x.push_back(x - x_vehicle);
-        result.path.y.push_back(y - solution.x[y_start+1+i]);
-        result.fit.x.push_back(x - x_vehicle);
-        result.fit.y.push_back(y - y_fit);
+        result.fit.x.push_back(x_fit);
+        result.fit.y.push_back(y_fit);
     }
 
 
