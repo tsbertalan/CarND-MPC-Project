@@ -2,6 +2,7 @@
 #include <cppad/cppad.hpp>
 #include <cppad/ipopt/solve.hpp>
 #include "Eigen-3.3/Eigen/Core"
+#include <cmath>
 
 using CppAD::AD;
 
@@ -26,6 +27,36 @@ size_t delta_start = epsi_start + N;
 size_t a_start = delta_start + N - 1;
 
 
+
+class Transformation_Matrix {
+private:
+    Eigen::Matrix<double, 3, 3> A;
+    double theta, xt, yt;
+
+public:
+    Transformation_Matrix(double theta, double xt, double yt) {
+        this->theta = theta;
+        this->xt = xt;
+        this->yt = yt;
+
+        double c = std::cos(theta);
+        double s = std::sin(theta);
+        A << c,-s, xt,
+             s, c, yt,
+             0, 0, 1;
+    }
+
+    Pair operator()(double xa, double ya) {
+        Eigen::Matrix<double, 3, 1> XA;
+        XA << xa, ya, 1;
+        auto XB = A * XA;
+        Pair result;
+        result.x = XB[0, 1];
+        result.y = XB[1, 1];
+    }
+};
+
+
 // This value assumes the model presented in the classroom is used.
 //
 // It was obtained by measuring the radius formed by running the vehicle in the
@@ -43,6 +74,15 @@ AD<double> polyevalAD(Eigen::VectorXd coeffs, AD<double> x) {
     AD<double> result = 0.0;
     for (int i = 0; i < coeffs.size(); i++) {
         result += coeffs[i] * CppAD::pow(x, i);
+    }
+    return result;
+}
+
+// Evaluate a polynomial.
+double polyeval(Eigen::VectorXd coeffs, double x) {
+    double result = 0.0;
+    for (int i = 0; i < coeffs.size(); i++) {
+        result += coeffs[i] * pow(x, i);
     }
     return result;
 }
@@ -182,6 +222,8 @@ MPC_Solution MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     double cte = state[4];
     double epsi = state[5];
 
+    Transformation_Matrix transformation(-psi, -x, -y);
+
     // Initial value of the independent variables.
     // SHOULD BE 0 besides initial state.
     Dvector vars(n_vars);
@@ -223,16 +265,16 @@ MPC_Solution MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
         constraints_lowerbound[i] = 0;
         constraints_upperbound[i] = 0;
     }
-    constraints_lowerbound[x_start] = x;
-    constraints_lowerbound[y_start] = y;
-    constraints_lowerbound[psi_start] = psi;
+    constraints_lowerbound[x_start] = 0;
+    constraints_lowerbound[y_start] = 0;
+    constraints_lowerbound[psi_start] = 0;
     constraints_lowerbound[v_start] = v;
     constraints_lowerbound[cte_start] = cte;
     constraints_lowerbound[epsi_start] = epsi;
 
-    constraints_upperbound[x_start] = x;
-    constraints_upperbound[y_start] = y;
-    constraints_upperbound[psi_start] = psi;
+    constraints_upperbound[x_start] = 0;
+    constraints_upperbound[y_start] = 0;
+    constraints_upperbound[psi_start] = 0;
     constraints_upperbound[v_start] = v;
     constraints_upperbound[cte_start] = cte;
     constraints_upperbound[epsi_start] = epsi;
@@ -281,10 +323,17 @@ MPC_Solution MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
                         solution.x[psi_start + 1], solution.x[v_start + 1],
                         solution.x[cte_start + 1], solution.x[epsi_start + 1],
                         solution.x[delta_start], solution.x[a_start]};
-    for(i=0; i<N; i++) {
-        result.xpath.push_back(solution.x[x_start+1+i]);
-        result.ypath.push_back(solution.x[y_start+1+i]);
+    for(i=0; i<N-1; i++) {
+        double x_vehicle = solution.x[x_start+1+i];
+        double y_vehicle = solution.x[y_start+1+i];
+        double x_fit = x_vehicle;
+        double y_fit = polyeval(coeffs, x);
+        result.path.x.push_back(x - x_vehicle);
+        result.path.y.push_back(y - solution.x[y_start+1+i]);
+        result.fit.x.push_back(x - x_vehicle);
+        result.fit.y.push_back(y - y_fit);
     }
+
 
     return result;
 }

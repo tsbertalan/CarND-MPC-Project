@@ -6,11 +6,23 @@
 
 using namespace std;
 
+struct XYPath {
+    vector<double> x;
+    vector<double> y;
+};
+
+struct Pair {
+    double x;
+    double y;
+};
+
 struct MPC_Solution {
     vector<double> variables;
-    vector<double> xpath;
-    vector<double> ypath;
+    XYPath path;
+    XYPath fit;
 };
+
+double polyeval(Eigen::VectorXd coeffs, double x);
 
 class MPC {
 public:
