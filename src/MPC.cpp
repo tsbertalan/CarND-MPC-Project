@@ -9,24 +9,24 @@ using std::cout;
 using std::cout;
 
 // Set the timestep length and duration
-size_t N = 8;
-double dt = 0.08;
+size_t N = 12;
+double dt = 0.06;
 
 // NOTE: feel free to play around with this
 // or do something completely different
-double ref_v = 60;
+double ref_v = 80;
 
 // Scaling factors for parts of the objective function.
-double scale_cte = 1e-1;
+double scale_cte = 5e-3;
 double scale_epsi = 1e-1;
-double scale_v = 1e-2;
+double scale_v = 5e-3;
 double scale_delta = 1e-2;
 double scale_a = 1e-1;
-double scale_ddelta = 1e-2;
+double scale_ddelta = 1e2;
 double scale_da = 1e-1;
 
 // If debugging, set print_level to "4".
-#define DEBUG false
+#define DEBUG true
 std::string print_level = "0";
 std::string tol = "1e-6";
 
