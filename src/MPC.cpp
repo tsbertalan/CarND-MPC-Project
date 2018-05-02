@@ -3,29 +3,33 @@
 #include <cppad/ipopt/solve.hpp>
 #include "Eigen-3.3/Eigen/Core"
 
+
 using CppAD::AD;
 using std::cout;
 using std::cout;
 
 // Set the timestep length and duration
-size_t N = 6;
-double dt = 0.15;
+size_t N = 8;
+double dt = 0.08;
 
 // NOTE: feel free to play around with this
 // or do something completely different
 double ref_v = 60;
 
-double scale_cte = 1e-2;
-double scale_epsi = 1e1;
-double scale_v = 8e-3;
+// Scaling factors for parts of the objective function.
+double scale_cte = 1e-1;
+double scale_epsi = 1e-1;
+double scale_v = 1e-2;
 double scale_delta = 1e-2;
 double scale_a = 1e-1;
 double scale_ddelta = 1e-2;
-double scale_da = 1e0;
+double scale_da = 1e-1;
 
+// If debugging, set print_level to "4".
+#define DEBUG false
 std::string print_level = "0";
+std::string tol = "1e-6";
 
-#define DEBUG true
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
@@ -303,6 +307,8 @@ MPC_Solution MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     // NOTE: Currently the solver has a maximum time limit of 0.5 seconds.
     // Change this as you see fit.
     options += "Numeric max_cpu_time          0.5\n";
+
+    options += "Numeric tol " + tol + "\n";
 
     // place to return solution
     CppAD::ipopt::solve_result<Dvector> solution;
