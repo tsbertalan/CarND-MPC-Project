@@ -11,6 +11,9 @@
 #include "json.hpp"
 
 #define poly_order 3
+// NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
+// SUBMITTING.
+#define LATENCY 100
 
 // for convenience
 using json = nlohmann::json;
@@ -238,10 +241,7 @@ int main() {
                     //
                     // Feel free to play around with this value but should be to drive
                     // around the track with 100ms latency.
-                    //
-                    // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
-                    // SUBMITTING.
-                    this_thread::sleep_for(chrono::milliseconds(100));
+                    this_thread::sleep_for(chrono::milliseconds(LATENCY));
                     ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
                 }
             } else {
