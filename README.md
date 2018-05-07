@@ -85,7 +85,26 @@ to correct in an intuitive way the problems that arose.
 
 From this, I made several observations on the effect of the coefficients:
 
-  *
+  1. The coefficient on v error (from target) should be small--it seems to work well
+  to have a large target velocity that we don't expect to actually achieve.
+  2. Wobble is best dealt with using the coefficients on the time-derivative of the actuator values.
+  3. The coefficients on the CTE (essentially, y-error) and the ψ error need to be increased simultaneously.
+  Raising these together will eventually lead to a dynamic where the car will aggressively brake before creeping around tighter turns.
+
+With point 3 in mind, I had hoped to find parameter where I could achieve very high speeds
+(about 80 mph) on the straight segments, and then automatically reduce to 40 or 50 mph for the curves.
+So, I set about increasing these two primary coefficients with the v coefficient (1) 
+to promote tighter adherance to the target speed.
+
+![some braking](doc/somebraking.gif)
+
+However, this generally led instead of to good centerline-following with braking before turns
+to near curb-strikes (see above).
+As I increased the coefficient on the v error, these got worse.
+It's possible I could avoid this by decreasing the coefficient on turning angle d,
+thus allowing for tighter turns, but I wasn't able to find acceptable parameters with extensive experimentation.
+I suspect that it would be necessary to project further in the future to make this method really work,
+for which I'd need to do some more code-optimization or perhaps get a faster machine.
 
 
 
