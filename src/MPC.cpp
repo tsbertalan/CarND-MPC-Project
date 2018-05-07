@@ -8,15 +8,19 @@ using CppAD::AD;
 using std::cout;
 using std::cout;
 
+
+
+
+//////// PARAMETERS ////////
+
 // Set the timestep length and duration
 size_t N = 12;
 double dt = 0.06;
 
-// NOTE: feel free to play around with this
-// or do something completely different
+// Set the target velocity
 double ref_v = 80;
 
-// Scaling factors for parts of the objective function.
+// Set the scaling factors for terms in the objective function.
 double scale_cte = 2e-3;
 double scale_epsi = 1e-1;
 double scale_v = 3e-3;
@@ -30,6 +34,8 @@ double scale_da = 1e-1;
 #define DEBUG false
 std::string print_level = "0";
 std::string tol = "1e-6";
+
+
 
 
 // The solver takes all the state variables and actuator
@@ -95,9 +101,10 @@ public:
         // Any additions to the cost should be added to `fg[0]`.
         fg[0] = 0;
 
+
+
         // Reference State Cost
-        // Define the cost related the reference state and
-        // any anything you think may be beneficial.
+        // Define the cost related the reference state.
         for (unsigned int t = 0; t < N; t++) {
             // Minimize the CTE.
             // Typical unscaled value is ~ 1e2;
@@ -135,8 +142,6 @@ public:
         //
         // Setup Constraints
         //
-        // NOTE: In this section you'll setup the model constraints.
-
         // Initial constraints
         //
         // We add 1 to each of the starting indices due to cost being located at
@@ -196,6 +201,7 @@ public:
 };
 
 
+// Print a squared vector, perhaps with a scaling. Really only for debugging.
 void psquared(double x, std::string name, double scale=1.0) {
     cout << name << "^2 ";
     if(scale != 1.0) {
@@ -218,8 +224,9 @@ MPC_Solution MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     typedef CPPAD_TESTVECTOR(double) Dvector;
 
     // Set the number of model variables (includes both states and inputs).
-// (State is (x, y, psi, v, cte, epsi) and actuators is (d, a).
+    // (State is (x, y, psi, v, cte, epsi) and actuators is (d, a).
     size_t n_vars = 6 * N + 2 * (N - 1);
+
     // Set the number of constraints
     size_t n_constraints = N * 6;
 
@@ -322,11 +329,6 @@ MPC_Solution MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     // Check some of the solution values
     ok &= solution.status == CppAD::ipopt::solve_result<Dvector>::success;
 
-    // Cost
-//    auto cost = solution.obj_value;
-//    cout << "Cost " << cost << cout;
-
-    // Return the first actuator values. The variables can be accessed with
 
     // Print some parts of the objective.
     if(DEBUG) {
@@ -342,9 +344,14 @@ MPC_Solution MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
         psquared(dd, "dd", scale_ddelta);
         double da = solution.x[a_start+1] - solution.x[a_start];
         psquared(da, "da", scale_da);
+
+        // Cost
+        auto cost = solution.obj_value;
+        cout << "Cost " << cost << endl;
     }
 
 
+    // Return the first actuator values. The variables can be accessed with
     MPC_Solution result;
     result.variables = {solution.x[x_start], solution.x[y_start],
                         solution.x[psi_start], solution.x[v_start],
@@ -361,7 +368,6 @@ MPC_Solution MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
         result.fit.x.push_back(x_fit);
         result.fit.y.push_back(y_fit);
     }
-
 
     return result;
 }

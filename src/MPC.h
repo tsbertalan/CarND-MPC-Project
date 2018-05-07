@@ -7,12 +7,14 @@
 using namespace std;
 
 
+// Structure for paths in 2D space.
 struct XYPath {
     vector<double> x;
     vector<double> y;
 };
 
 
+// Structure for returning control solutions from the MPC solver.
 struct MPC_Solution {
     vector<double> variables;
     XYPath path;

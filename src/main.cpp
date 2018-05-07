@@ -10,10 +10,17 @@
 #include "MPC.h"
 #include "json.hpp"
 
+
+
+
+//////// PARAMETERS ////////
 #define poly_order 3
 // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
 // SUBMITTING.
 #define LATENCY 100
+
+
+
 
 // for convenience
 using json = nlohmann::json;
@@ -204,12 +211,11 @@ int main() {
                     auto result = mpc.Solve(state, coeffs);
                     auto vars = result.variables;
                     double steer_value = -vars[6] / deg2rad(25.0);
-//                    double throttle_value = max(vars[7], 0.0);
+                    // If braking is causing the simulator to stick, consider only using the gas.
+                    //double throttle_value = max(vars[7], 0.0);
                     double throttle_value = vars[7];
 
                     json msgJson;
-                    // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
-                    // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
                     msgJson["steering_angle"] = steer_value;
                     msgJson["throttle"] = throttle_value;
 
@@ -218,8 +224,6 @@ int main() {
                     // the points in the simulator are connected by a green line
                     vector<double> mpc_x_vals = result.path.x;
                     vector<double> mpc_y_vals = result.path.y;
-//                    vector<double> mpc_x_vals = result.fit.x;
-//                    vector<double> mpc_y_vals = result.fit.y;
                     msgJson["mpc_x"] = mpc_x_vals;
                     msgJson["mpc_y"] = mpc_y_vals;
 
@@ -228,8 +232,6 @@ int main() {
                     // the points in the simulator are connected by a yellow line
                     vector<double> next_x_vals = result.fit.x;
                     vector<double> next_y_vals = result.fit.y;
-//                    vector<double> next_x_vals = ptsx_vehicle;
-//                    vector<double> next_y_vals = ptsy_vehicle;
                     msgJson["next_x"] = next_x_vals;
                     msgJson["next_y"] = next_y_vals;
 
