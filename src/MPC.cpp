@@ -17,8 +17,8 @@ double dt = 0.06;
 double ref_v = 80;
 
 // Scaling factors for parts of the objective function.
-double scale_cte = 1e-1;
-double scale_epsi = 1e1;
+double scale_cte = 2e-3;
+double scale_epsi = 1e-1;
 double scale_v = 3e-3;
 double scale_delta = 1e-2;
 double scale_a = 1e-1;
