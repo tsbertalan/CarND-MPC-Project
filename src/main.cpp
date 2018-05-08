@@ -10,6 +10,10 @@
 #include "MPC.h"
 #include "json.hpp"
 
+// For latency measurment/compensation.
+#include <boost/circular_buffer.hpp>
+#include <chrono>
+
 
 
 
@@ -18,6 +22,7 @@
 // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
 // SUBMITTING.
 #define LATENCY 100
+#define MAX_DELAYS 10
 
 
 
@@ -120,6 +125,53 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
 
 
 
+class DelayPredictor {
+private:
+    double d, a;
+    std::chrono::time_point<std::chrono::system_clock> t_prev;
+    boost::circular_buffer<double> previous_delay_times;
+
+public:
+    DelayPredictor() : previous_delay_times(MAX_DELAYS) {
+        d = 0;
+        a = 0;
+        previous_delay_times.push_back(.001*LATENCY);
+        t_prev = std::chrono::system_clock::now();
+    }
+
+    double estimate_latency() {
+        double dt_est = 0;
+        for(auto dt : previous_delay_times) {
+            dt_est += dt;
+        }
+        dt_est /= previous_delay_times.size();
+        return dt_est;
+    }
+
+    std::vector<double> get_delayed_state(double px, double py, double psi, double v) {
+        double dt_est = estimate_latency();
+        std::cout << "Estimated latency is " << dt_est << " seconds." << std::endl;
+        double px_delay = px + v * cos(psi) * dt_est;
+        double py_delay = py + v * sin(psi) * dt_est;
+        double psi_delay = psi + v / 2.67 * d * dt_est;
+        double v_delay = v + a * dt_est;
+
+        return {px_delay, py_delay, psi_delay, v_delay};
+    }
+
+    void set_previous_control_actuations(double steer_value, double throttle_value) {
+        d = steer_value * -deg2rad(25.0);
+        a = throttle_value;
+
+        // Measure the latency.
+        std::chrono::time_point<std::chrono::system_clock> t
+        = std::chrono::system_clock::now();
+        std::chrono::duration<double> dt = t - t_prev;
+        t_prev = t;
+        previous_delay_times.push_back(dt.count());
+    }
+};
+
 
 
 int main() {
@@ -129,10 +181,9 @@ int main() {
     MPC mpc;
 
     // Keep track of most-recent actuations.
-    double steer_value = 0;
-    double throttle_value = 0;
+    DelayPredictor delay_predictor;
 
-    h.onMessage([&mpc, &steer_value, &throttle_value](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+    h.onMessage([&mpc, &delay_predictor](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                        uWS::OpCode opCode) {
         // "42" at the start of the message means there's a websocket message event.
         // The 4 signifies a websocket message
@@ -158,16 +209,18 @@ int main() {
                     // not a starting point of the current state,
                     // but the current state plus a small uncontrolled delay.
                     // See MPC.cpp for some more details on this motion model.
-                    double dt_est = 0.150;
-                    double px_delay = px + v * cos(psi) * dt_est;
-                    double py_delay = py + v * sin(psi) * dt_est;
-                    const double Lf = 2.67;
-                    double d = steer_value * -deg2rad(25.0);
-                    double psi_delay = psi + v / Lf * d * dt_est;
-                    double v_delay = v + throttle_value * dt_est;
+                    std::cout << "State went from (";
+                    std::cout << px <<", "<< py <<", "<< psi <<", "<< v << ")" << std::endl;
+                    auto delayed_state = delay_predictor.get_delayed_state(px, py, psi, v);
+                    px = delayed_state[0];
+                    py = delayed_state[1];
+                    psi = delayed_state[2];
+                    v = delayed_state[3];
+                    std::cout << "to              (";
+                    std::cout << px <<", "<< py <<", "<< psi <<", "<< v << ")" << std::endl;
 
                     // Estimate a transformation from vehicle to map and v/v.
-                    Transformation_Matrix vehicle2map(psi_delay, px_delay, py_delay);
+                    Transformation_Matrix vehicle2map(psi, px, py);
                     Transformation_Matrix map2vehicle = vehicle2map.inverse();
 
                     // Fit a polynomial to the centerline coordinates.
@@ -188,7 +241,7 @@ int main() {
 
                     // calculate the cross track error
                     // Negative sign is here because if the poly evaluates positive, our y coordinate (0) is too small.
-                    double cte = -polyeval(coeffs, px_delay);
+                    double cte = -polyeval(coeffs, px);
 
                     // calculate the orientation error
                     // Negative sign is here because if slope is positive, angle is positive,
@@ -198,7 +251,7 @@ int main() {
                     // First three state values (x, y, psi) are all zero because we're considering MPC solutions
                     // that start from the car's position in its own coordinate frame.
                     Eigen::VectorXd state(6);
-                    state << 0, 0, 0, v_delay, cte, epsi;
+                    state << 0, 0, 0, v, cte, epsi;
 
                     /*
                     * Calculate steering angle and throttle using MPC.
@@ -208,10 +261,10 @@ int main() {
                     */
                     auto result = mpc.Solve(state, coeffs);
                     auto vars = result.variables;
-                    steer_value = -vars[6] / deg2rad(25.0);
+                    double steer_value = -vars[6] / deg2rad(25.0);
                     // If braking is causing the simulator to stick, consider only using the gas.
                     //double throttle_value = max(vars[7], 0.0);
-                    throttle_value = vars[7];
+                    double throttle_value = vars[7];
 
                     json msgJson;
                     msgJson["steering_angle"] = steer_value;
@@ -242,6 +295,7 @@ int main() {
                     // Feel free to play around with this value but should be to drive
                     // around the track with 100ms latency.
                     this_thread::sleep_for(chrono::milliseconds(LATENCY));
+                    delay_predictor.set_previous_control_actuations(steer_value, throttle_value);
                     ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
                 }
             } else {
