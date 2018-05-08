@@ -18,15 +18,15 @@ static const size_t N = 12;
 static const double dt = 0.06;
 
 // Set the target velocity
-static const double ref_v = 80;
+static const double ref_v = 90;
 
 // Set the scaling factors for terms in the objective function.
-static const double scale_cte = 1;
-static const double scale_epsi = 100;
+static const double scale_cte = 10;
+static const double scale_epsi = 500;
 static const double scale_v = .05;
-static const double scale_delta = .05;
+static const double scale_delta = .01;
 static const double scale_a = .1;
-static const double scale_ddelta = 1e5;
+static const double scale_ddelta = 1e6;
 static const double scale_da = .1;
 
 
