@@ -148,7 +148,11 @@ int main() {
     // MPC is initialized here!
     MPC mpc;
 
-    h.onMessage([&mpc](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+    // Keep track of most-recent actuations.
+    double steer_value = 0;
+    double throttle_value = 0;
+
+    h.onMessage([&mpc, &steer_value, &throttle_value](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                        uWS::OpCode opCode) {
         // "42" at the start of the message means there's a websocket message event.
         // The 4 signifies a websocket message
@@ -160,7 +164,8 @@ int main() {
                 auto j = json::parse(s);
                 string event = j[0].get<string>();
                 if (event == "telemetry") {
-                    // j[1] is the data JSON object
+
+                    // Extract the current state and nearby road midpoints.
                     vector<double> ptsx = j[1]["ptsx"];
                     vector<double> ptsy = j[1]["ptsy"];
                     double px = j[1]["x"];
@@ -168,16 +173,30 @@ int main() {
                     double psi = j[1]["psi"];
                     double v = j[1]["speed"];
 
-                    Transformation_Matrix vehicle2map(psi, px, py);
+                    // Predict the next state with latency.
+                    // Running the MPC takes time, so, realistically, it should assume
+                    // not a starting point of the current state,
+                    // but the current state plus a small uncontrolled delay.
+                    // See MPC.cpp for some more details on this motion model.
+                    double dt_est = 0.150;
+                    double px_delay = px + v * cos(psi) * dt_est;
+                    double py_delay = py + v * sin(psi) * dt_est;
+                    const double Lf = 2.67;
+                    double d = steer_value * -deg2rad(25.0);
+                    double psi_delay = psi + v / Lf * d * dt_est;
+                    double v_delay = v + throttle_value * dt_est;
+
+                    // Estimate a transformation from vehicle to map and v/v.
+                    Transformation_Matrix vehicle2map(psi_delay, px_delay, py_delay);
                     Transformation_Matrix map2vehicle = vehicle2map.inverse();
 
+                    // Fit a polynomial to the centerline coordinates.
+                    // Sadly, polyfit wants a VectorXD, not a vector<double>.
                     Eigen::VectorXd ptsx_v(ptsx.size());
                     Eigen::VectorXd ptsy_v(ptsy.size());
-
                     ptsx_v.fill(0);
                     ptsy_v.fill(0);
                     vector<double> ptsx_vehicle, ptsy_vehicle;
-
                     for(unsigned int i=0; i<ptsx.size(); i++) {
                         Pair polyxy = map2vehicle(ptsx[i], ptsy[i]);
                         ptsx_v[i] = polyxy.x;
@@ -185,13 +204,12 @@ int main() {
                         ptsx_vehicle.push_back(polyxy.x);
                         ptsy_vehicle.push_back(polyxy.y);
                     }
-
-                    // Fit a polynomial to the above x and y coordinates
                     auto coeffs = polyfit(ptsx_v, ptsy_v, std::min((int) ptsx.size()-1, poly_order));
 
                     // calculate the cross track error
                     // Negative sign is here because if the poly evaluates positive, our y coordinate (0) is too small.
-                    double cte = -polyeval(coeffs, px);
+                    double cte = -polyeval(coeffs, px_delay);
+
                     // calculate the orientation error
                     // Negative sign is here because if slope is positive, angle is positive,
                     // and our angle of 0 radians is too small.
@@ -200,7 +218,7 @@ int main() {
                     // First three state values (x, y, psi) are all zero because we're considering MPC solutions
                     // that start from the car's position in its own coordinate frame.
                     Eigen::VectorXd state(6);
-                    state << 0, 0, 0, v, cte, epsi;
+                    state << 0, 0, 0, v_delay, cte, epsi;
 
                     /*
                     * Calculate steering angle and throttle using MPC.
@@ -210,10 +228,10 @@ int main() {
                     */
                     auto result = mpc.Solve(state, coeffs);
                     auto vars = result.variables;
-                    double steer_value = -vars[6] / deg2rad(25.0);
+                    steer_value = -vars[6] / deg2rad(25.0);
                     // If braking is causing the simulator to stick, consider only using the gas.
                     //double throttle_value = max(vars[7], 0.0);
-                    double throttle_value = vars[7];
+                    throttle_value = vars[7];
 
                     json msgJson;
                     msgJson["steering_angle"] = steer_value;
