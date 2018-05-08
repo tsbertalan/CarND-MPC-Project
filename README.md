@@ -65,6 +65,87 @@ It's possible this could be further enhanced by supplying the solution
 as an initial guess to the solver.
 
 
+#### Update equations
+
+The update equations are implied in a set of constraints supplied to IPOPT. 
+
+While the constraints reduce the number of degrees of freedom,
+IPOPT works in terms of a vector of variables
+that includes the full projected trajectory.
+Looping over a time index `t` from 1 to the number of projected timesteps `N`, 
+we have for example
+
+```c++
+AD<double> x0 = vars[x_start + t - 1];
+AD<double> x1 = vars[x_start + t];
+```
+and so on for `x`, `y`, `psi`, `cte`, `epsi`, `d`, and `a`.
+We also evaluate our fitted polynomial surrogate for the lane centerline
+(in vehicle coordinates) as `yDesired0`,
+and compute the desired yaw as the arctangent of the polynomial slope.
+
+State is then propagated forward according to the bicycle motion model,
+in the form of imposed constraints.
+```c++
+fg[1 + x_start + t] = x1 - (x0 + v0 * CppAD::cos(psi0) * dt);
+fg[1 + y_start + t] = y1 - (y0 + v0 * CppAD::sin(psi0) * dt);
+fg[1 + v_start + t] = v1 - (v0 + a0 * dt);
+```
+
+CTE at the next step is computed as the previous CTE
+plus the growth due to current psi error.
+```c++
+fg[1 + cte_start + t] = cte1 - ((yDesired0 - y0) + (v0 * CppAD::sin(epsi0) * dt));
+```
+
+Finally psi and psi error both grow their current values due to the turning rate.
+```c++
+auto dpsi = v0 * d0 / Lf * dt;
+fg[1 + psi_start + t] = psi1 - (psi0 + dpsi);
+auto epsi0_calc = psi0 - psiDesired0;
+fg[1 + epsi_start + t] = epsi1 - (epsi0_calc + dpsi);
+```
+
+
+
+#### Choice of projective timestep size
+
+The number-of-timesteps parameter `N` and timestep-size parameter `dt`
+must be chosen to balance a several requirements. Namely,
+ 1. The product `N*dt` must be large enough to give the projection a meaningful predictive horizon.
+ 2. The timestep `dt` must be small enough to reduce to manageability the error imposed by the Euler-integration approximtion.
+ 3. The count `N` must be low enough that the MPC solution does not add excessive latency. 
+ (Increasing `N` might impose a more-than-O(N) slowdown 
+ since IPOPT must compute more control actions and thus must search a larger solution space.)
+So, I increased or decreased these values to meet requirements with these heuristics in mind. 
+
+When experimenting with objective-term coefficients to promote braking on tight turns
+I experimented with larger `N` values (to allow for pre-emptive braking),
+but didn't meet with much success for several possible reasons.
+
+
+
+#### Dealing with latency
+
+The coefficients chosen below were primarily tuned on one laptop
+(a Thinkpad t470 an i5 processor), but might be sub-optimal on other equipment.
+Indeed, removing the artificial 100ms latency actually appears to worsen performance.
+I attribute this to the control actions being sent not at the moment of data measurment, 
+but some time afterwards, so that the simulator environment at time of actuation
+is not precisely that which was used when computing the MPC solution.
+As such, the coefficients used were tuned 
+for a qualitatively different dynamical system than
+that that which emerges when no artificial latency is applied.
+
+A potentially more principled way to deal with this 
+might be to simulate the latency explicitly--either keep track of recent latency values or a running mean,
+and include these directly in the state update equations.
+Perhaps this could be done 
+by adding `(int) LATENCY/dt` dummy timesteps to the projected trajectory,
+during which the control actuations are constrained to be their previous values,
+and not available to IPOPT for optimization.
+
+
 
 ## Coefficient tuning
 
@@ -105,6 +186,8 @@ It's possible I could avoid this by decreasing the coefficient on turning angle 
 thus allowing for tighter turns, but I wasn't able to find acceptable parameters with extensive experimentation.
 I suspect that it would be necessary to project further in the future to make this method really work,
 for which I'd need to do some more code-optimization or perhaps get a faster machine.
+
+
 
 
 
