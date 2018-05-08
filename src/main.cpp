@@ -40,26 +40,6 @@ struct Pair {
 };
 
 
-void print_vector(vector<double> v, std::string name) {
-    std::cout << name << " = [";
-    for(auto x : v) {
-        std::cout << x << ", ";
-    }
-    std::cout << "]" << std::endl;
-}
-
-void print_matrix(Eigen::MatrixXd m, std::string name) {
-    std::cout << name << " = [" << endl;
-    for(unsigned int i=0; i<m.rows(); i++) {
-        for(unsigned int j=0; j<m.cols(); j++) {
-            std::cout << m(i, j) << ", ";
-        }
-        std::cout << std::endl;
-    }
-    std::cout << "]" << std::endl;
-}
-
-
 // Wrap a rotation+translation in a nice class.
 class Transformation_Matrix {
 private:
