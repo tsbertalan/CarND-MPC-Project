@@ -211,6 +211,10 @@ int main() {
                     double psi = j[1]["psi"];
                     double v = j[1]["speed"];
 
+                    // Estimate a transformation from vehicle to map and v/v.
+                    Transformation_Matrix vehicle2map(psi, px, py);
+                    Transformation_Matrix map2vehicle = vehicle2map.inverse();
+
                     // Predict the next state with latency.
                     // Running the MPC takes time, so, realistically, it should assume
                     // not a starting point of the current state,
@@ -221,10 +225,6 @@ int main() {
                     py = delayed_state[1];
                     psi = delayed_state[2];
                     v = delayed_state[3];
-
-                    // Estimate a transformation from vehicle to map and v/v.
-                    Transformation_Matrix vehicle2map(psi, px, py);
-                    Transformation_Matrix map2vehicle = vehicle2map.inverse();
 
                     // Fit a polynomial to the centerline coordinates.
                     // Sadly, polyfit wants a VectorXD, not a vector<double>.
