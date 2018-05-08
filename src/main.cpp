@@ -150,7 +150,6 @@ public:
 
     std::vector<double> get_delayed_state(double px, double py, double psi, double v) {
         double dt_est = estimate_latency();
-        std::cout << "Estimated latency is " << dt_est << " seconds." << std::endl;
         double px_delay = px + v * cos(psi) * dt_est;
         double py_delay = py + v * sin(psi) * dt_est;
         double psi_delay = psi + v / 2.67 * d * dt_est;
@@ -209,15 +208,11 @@ int main() {
                     // not a starting point of the current state,
                     // but the current state plus a small uncontrolled delay.
                     // See MPC.cpp for some more details on this motion model.
-                    std::cout << "State went from (";
-                    std::cout << px <<", "<< py <<", "<< psi <<", "<< v << ")" << std::endl;
                     auto delayed_state = delay_predictor.get_delayed_state(px, py, psi, v);
                     px = delayed_state[0];
                     py = delayed_state[1];
                     psi = delayed_state[2];
                     v = delayed_state[3];
-                    std::cout << "to              (";
-                    std::cout << px <<", "<< py <<", "<< psi <<", "<< v << ")" << std::endl;
 
                     // Estimate a transformation from vehicle to map and v/v.
                     Transformation_Matrix vehicle2map(psi, px, py);
