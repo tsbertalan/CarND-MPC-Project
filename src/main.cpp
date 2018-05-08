@@ -18,11 +18,11 @@
 
 
 //////// PARAMETERS ////////
-#define poly_order 3
+static const unsigned int poly_order = 3;
 // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
 // SUBMITTING.
-#define LATENCY 100
-#define MAX_DELAYS 10
+static const size_t LATENCY = 100;
+static const size_t MAX_DELAYS = 10;
 
 
 
@@ -103,17 +103,17 @@ string hasData(string s) {
 // Adapted from
 // https://github.com/JuliaMath/Polynomials.jl/blob/master/src/Polynomials.jl#L676-L716
 Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
-                        int order) {
+                        unsigned int order) {
     assert(xvals.size() == yvals.size());
     assert(order >= 1 && order <= xvals.size() - 1);
     Eigen::MatrixXd A(xvals.size(), order + 1);
 
-    for (int i = 0; i < xvals.size(); i++) {
+    for (unsigned int i = 0; i < xvals.size(); i++) {
         A(i, 0) = 1.0;
     }
 
-    for (int j = 0; j < xvals.size(); j++) {
-        for (int i = 0; i < order; i++) {
+    for (unsigned int j = 0; j < xvals.size(); j++) {
+        for (unsigned short i = 0; i < order; i++) {
             A(j, i + 1) = A(j, i) * xvals(j);
         }
     }
@@ -240,7 +240,7 @@ int main() {
                         ptsx_vehicle.push_back(polyxy.x);
                         ptsy_vehicle.push_back(polyxy.y);
                     }
-                    auto coeffs = polyfit(ptsx_v, ptsy_v, std::min((int) ptsx.size()-1, poly_order));
+                    auto coeffs = polyfit(ptsx_v, ptsy_v, std::min((unsigned int) ptsx.size()-1, poly_order));
 
                     // calculate the cross track error
                     // Negative sign is here because if the poly evaluates positive, our y coordinate (0) is too small.
