@@ -21,13 +21,13 @@ double dt = 0.06;
 double ref_v = 80;
 
 // Set the scaling factors for terms in the objective function.
-double scale_cte = 2e-3;
-double scale_epsi = 1e-1;
-double scale_v = 3e-3;
-double scale_delta = 1e-2;
-double scale_a = 1e-1;
-double scale_ddelta = 1e3;
-double scale_da = 1e-1;
+double scale_cte = 1;
+double scale_epsi = 100;
+double scale_v = .05;
+double scale_delta = .05;
+double scale_a = .1;
+double scale_ddelta = 1e5;
+double scale_da = .1;
 
 
 // If debugging, set print_level to "4".
