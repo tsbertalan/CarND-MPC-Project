@@ -145,6 +145,9 @@ by adding `(int) LATENCY/dt` dummy timesteps to the projected trajectory,
 during which the control actuations are constrained to be their previous values,
 and not available to IPOPT for optimization.
 
+In production, at the very least I'd use something like `ros::Rate` to promote
+consistent loop timing.
+
 
 
 ## Coefficient tuning
