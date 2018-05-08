@@ -166,8 +166,16 @@ public:
         std::chrono::time_point<std::chrono::system_clock> t
         = std::chrono::system_clock::now();
         std::chrono::duration<double> dt = t - t_prev;
-        t_prev = t;
+        set_time(t);
         previous_delay_times.push_back(dt.count());
+    }
+
+    void set_time(std::chrono::time_point<std::chrono::system_clock> t) {
+        t_prev = t;
+    }
+
+    void set_time() {
+        set_time(std::chrono::system_clock::now());
     }
 };
 
@@ -315,8 +323,11 @@ int main() {
         }
     });
 
-    h.onConnection([&h](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
+    h.onConnection([&h, &delay_predictor](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
         std::cout << "Connected!!!" << std::endl;
+
+        // Only set t0 for latency estimation once we've actually connected.
+        delay_predictor.set_time();
     });
 
     h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER> ws, int code,
