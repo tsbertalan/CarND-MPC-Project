@@ -159,11 +159,11 @@ public:
      * Project the given state values forward the current latency estimate.
      */
     std::vector<double> get_delayed_state(double px, double py, double psi, double v) {
-        double dt_est = estimate_latency();
-        double px_delay = px + v * cos(psi) * dt_est;
-        double py_delay = py + v * sin(psi) * dt_est;
-        double psi_delay = psi + v / 2.67 * d * dt_est;
-        double v_delay = v + a * dt_est;
+        const double dt_est = estimate_latency();
+        const double px_delay = px + v * cos(psi) * dt_est;
+        const double py_delay = py + v * sin(psi) * dt_est;
+        const double psi_delay = psi + v / 2.67 * d * dt_est;
+        const double v_delay = v + a * dt_est;
 
         return {px_delay, py_delay, psi_delay, v_delay};
     }
@@ -259,16 +259,16 @@ int main() {
                         ptsx_vehicle.push_back(polyxy.x);
                         ptsy_vehicle.push_back(polyxy.y);
                     }
-                    auto coeffs = polyfit(ptsx_v, ptsy_v, std::min((unsigned int) ptsx.size()-1, poly_order));
+                    const auto coeffs = polyfit(ptsx_v, ptsy_v, std::min((unsigned int) ptsx.size()-1, poly_order));
 
                     // calculate the cross track error
                     // Negative sign is here because if the poly evaluates positive, our y coordinate (0) is too small.
-                    double cte = -polyeval(coeffs, px);
+                    const double cte = -polyeval(coeffs, px);
 
                     // calculate the orientation error
                     // Negative sign is here because if slope is positive, angle is positive,
                     // and our angle of 0 radians is too small.
-                    double epsi = -atan(coeffs[1]);
+                    const double epsi = -atan(coeffs[1]);
 
                     // First three state values (x, y, psi) are all zero because we're considering MPC solutions
                     // that start from the car's position in its own coordinate frame.

@@ -225,18 +225,18 @@ MPC_Solution MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
 
     // Set the number of model variables (includes both states and inputs).
     // (State is (x, y, psi, v, cte, epsi) and actuators is (d, a).
-    size_t n_vars = 6 * N + 2 * (N - 1);
+    const size_t n_vars = 6 * N + 2 * (N - 1);
 
     // Set the number of constraints
-    size_t n_constraints = N * 6;
+    const size_t n_constraints = N * 6;
 
-    double x = 0;//state[0];
-    double y = 0;//state[1];
-    double psi = 0;//state[2];
+    const double x = 0;//state[0];
+    const double y = 0;//state[1];
+    const double psi = 0;//state[2];
 
-    double v = state[3];
-    double cte = state[4];
-    double epsi = state[5];
+    const double v = state[3];
+    const double cte = state[4];
+    const double epsi = state[5];
 
     // Initial value of the independent variables.
     // SHOULD BE 0 besides initial state.
