@@ -49,7 +49,7 @@ The main loop can be roughly described with five steps:
 5. Request MPC solution (d, a).
 
 Computing MPC solution (and the projected solution) in vehicle coordinates
-helps to avoid singularities--i.e., for short-time projections, 
+helps to avoid singularities -- i.e., for short-time projections, 
 we can be reasonably certain that y will be a function of x
 (where x is now defined as the forward direction of the car's initial point,
 and positive y extends to the car's left).
@@ -168,6 +168,12 @@ std::vector<double> get_delayed_state(double px, double py, double psi, double v
 ```
 This is bundled in a `DelayPredictor` class which is only used within `main.cpp`.
 
+It should be noted that this is just one step of Euler integration -- 
+if latency is large, it may be beneficial 
+to use something with higher-order accuracy, like a single Runge-Kutta step.
+As an aside, the same might be said for the projected trajectories
+used in the MPC objective function.
+
 Adding this adjustment made it possible to re-tune the objective function weights/coefficients to achieve a top speed of about 88 mph rather than 56.
 
 An alternative method
@@ -202,7 +208,7 @@ to correct in an intuitive way the problems that arose.
 
 From this, I made several observations on the effect of the coefficients:
 
-  1. The coefficient on v error (from target) should be small--it seems to work well
+  1. The coefficient on v error (from target) should be small -- it seems to work well
   to have a large target velocity that we don't expect to actually achieve.
   2. Wobble is best dealt with using the coefficients on the time-derivative of the actuator values.
   3. The coefficients on the CTE (essentially, y-error) and the ψ error need to be increased simultaneously.
