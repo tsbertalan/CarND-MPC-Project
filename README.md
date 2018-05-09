@@ -174,7 +174,8 @@ to use something with higher-order accuracy, like a single Runge-Kutta step.
 As an aside, the same might be said for the projected trajectories
 used in the MPC objective function.
 
-Adding this adjustment made it possible to re-tune the objective function weights/coefficients to achieve a top speed of about 88 mph rather than 56.
+Adding this adjustment made it possible to re-tune the objective function weights/coefficients to achieve a top speed of about 97 mph rather than 56
+(though the controller drops the speed as to low as 46 mph for the tight turns).
 
 An alternative method
 might be to add `(int) LATENCY/dt` dummy timesteps
