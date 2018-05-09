@@ -124,7 +124,11 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
 }
 
 
-
+/*
+ * Keep a running mean of MPC-solve latency times,
+ * and use this to provide an adjusted starting position
+ * for MPC to use in its projected trajectories.
+ */
 class DelayPredictor {
 private:
     double d, a;
@@ -139,6 +143,9 @@ public:
         t_prev = std::chrono::system_clock::now();
     }
 
+    /*
+     * Return a running mean of the remembered latency durations.
+     */
     double estimate_latency() {
         double dt_est = 0;
         for(auto dt : previous_delay_times) {
@@ -148,6 +155,9 @@ public:
         return dt_est;
     }
 
+    /*
+     * Project the given state values forward the current latency estimate.
+     */
     std::vector<double> get_delayed_state(double px, double py, double psi, double v) {
         double dt_est = estimate_latency();
         double px_delay = px + v * cos(psi) * dt_est;
@@ -158,6 +168,10 @@ public:
         return {px_delay, py_delay, psi_delay, v_delay};
     }
 
+    /*
+     * Record the actuated control values AND, as a side effect,
+     * append a measurement of the latency.
+     */
     void set_previous_control_actuations(double steer_value, double throttle_value) {
         d = steer_value * -deg2rad(25.0);
         a = throttle_value;
@@ -174,6 +188,11 @@ public:
         t_prev = t;
     }
 
+    /*
+     * Set the last-measured time mark. This must be used when we first start communicating
+     * with the simulator, since that connection might happen significantly after
+     * when the DelayPredictor class is constructed.
+     */
     void set_time() {
         set_time(std::chrono::system_clock::now());
     }
