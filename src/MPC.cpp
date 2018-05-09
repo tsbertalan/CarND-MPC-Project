@@ -21,8 +21,8 @@ static const double dt = 0.06;
 static const double ref_v = 100;
 
 // Set the scaling factors for terms in the objective function.
-static const double scale_cte = 100;
-static const double scale_epsi = 1000;
+static const double scale_cte = 300;
+static const double scale_epsi = 2000;
 static const double scale_v = .5;
 static const double scale_delta = .01;
 static const double scale_a = .1;
