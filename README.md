@@ -128,8 +128,11 @@ but didn't meet with much success for several possible reasons.
 #### Dealing with latency
 
 The coefficients chosen below were primarily tuned on one laptop
-(a Thinkpad t470 an i5 processor), but might be sub-optimal on other equipment.
-Indeed, removing the artificial 100ms latency actually appears to worsen performance.
+(a Thinkpad t470 with an i5 CPU),
+which added a typical 67 milliseconds of latency per observation/actuation.
+To this I add an extra 100 ms of artificial latency.
+Without compensation,
+removing the artificial 100ms latency actually appears to worsen performance.
 I attribute this to the control actions being sent not at the moment of data measurment, 
 but some time afterwards, so that the simulator environment at time of actuation
 is not precisely that which was used when computing the MPC solution.
@@ -137,16 +140,46 @@ As such, the coefficients used were tuned
 for a qualitatively different dynamical system than
 that that which emerges when no artificial latency is applied.
 
-A potentially more principled way to deal with this 
-might be to simulate the latency explicitly--either keep track of recent latency values or a running mean,
-and include these directly in the state update equations.
-Perhaps this could be done 
-by adding `(int) LATENCY/dt` dummy timesteps to the projected trajectory,
+To make the method more robust,
+I keep track of recent latency durations in a circular buffer
+and take a running mean.
+I then assume that this is the degree of staleness of the system state data
+by the time the MPC-solution actuations are applied.
+So, before passing a starting state to the MPC solver 
+(but after transforming the road centerline points to the current vehicle frame) 
+I apply the state update equations to predict where the vehicle will be 
+by the time the solution is available.
+
+The code for performing this projection mostly regurgitates
+the state update equations (constraints) from the MPC solver.
+The function `estimate_latency` computes the running mean of latency measurments,
+and the actuations `d` and `a` are saved from the previous MPC solution
+(or are zero at system start).
+```c++
+std::vector<double> get_delayed_state(double px, double py, double psi, double v) {
+    double dt_est = estimate_latency();
+    double px_delay = px + v * cos(psi) * dt_est;
+    double py_delay = py + v * sin(psi) * dt_est;
+    double psi_delay = psi + v / 2.67 * d * dt_est;
+    double v_delay = v + a * dt_est;
+
+    return {px_delay, py_delay, psi_delay, v_delay};
+}
+```
+This is bundled in a `DelayPredictor` class which is only used within `main.cpp`.
+
+Adding this adjustment made it possible to re-tune the objective function weights/coefficients to achieve a top speed of about 88 mph rather than 56.
+
+An alternative method
+might be to add `(int) LATENCY/dt` dummy timesteps
+to the projected trajectory,
 during which the control actuations are constrained to be their previous values,
 and not available to IPOPT for optimization.
 
-In production, at the very least I'd use something like `ros::Rate` to promote
-consistent loop timing.
+In production, it may be desirable to use something like `ros::Rate` 
+to promote consistent loop timing; 
+or it could be that the latency compensation described above 
+works best used with no rate-limiting.
 
 
 
