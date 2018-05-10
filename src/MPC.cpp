@@ -201,14 +201,16 @@ public:
 };
 
 
-// Print a squared vector, perhaps with a scaling. Really only for debugging.
-void psquared(double x, std::string name, double scale=1.0) {
+// Print a squared value, perhaps with a scaling. Really only for debugging.
+double psquared(double x, std::string name, double scale=1.0) {
+    double err = scale * pow(x, 2);
     cout << name << "^2 ";
     if(scale != 1.0) {
         cout << "* " << scale << " ";
     }
     cout << "= ";
-    cout << scale * pow(x, 2) << endl;
+    cout << err << endl;
+    return err;
 }
 
 //
@@ -332,18 +334,31 @@ MPC_Solution MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
 
     // Print some parts of the objective.
     if(DEBUG) {
+        vector<double> parts;
+        const vector<string> names = {"cte", "epsi", "v", "d", "a", "dd", "da"};
         cout << endl << "Objective Components:" << endl;
-        psquared(cte, "cte", scale_cte);
-        psquared(epsi, "epsi", scale_epsi);
-        psquared(v-ref_v, "(v-ref_v)", scale_v);
+        parts.push_back(psquared(cte, "cte", scale_cte));
+        parts.push_back(psquared(epsi, "epsi", scale_epsi));
+        parts.push_back(psquared(v-ref_v, "(v-ref_v)", scale_v));
 
-        psquared(solution.x[delta_start], "d", scale_delta);
-        psquared(solution.x[a_start], "a", scale_a);
+        parts.push_back(psquared(solution.x[delta_start], "d", scale_delta));
+        parts.push_back(psquared(solution.x[a_start], "a", scale_a));
 
         double dd = solution.x[delta_start+1] - solution.x[delta_start];
-        psquared(dd, "dd", scale_ddelta);
+        parts.push_back(psquared(dd, "dd", scale_ddelta));
         double da = solution.x[a_start+1] - solution.x[a_start];
-        psquared(da, "da", scale_da);
+        parts.push_back(psquared(da, "da", scale_da));
+
+        // Sort names by corresponding objective component values.
+        vector<int> indices = {0, 1, 2, 3, 4, 5, 6};
+        sort(indices.begin(), indices.end(), [&](int x, int y){return parts[x] > parts[y];});
+
+        cout << "Order of objective contributions: ";
+        for(int index : indices) {
+            cout << names[index] << " > ";
+        }
+        cout << "0" << endl;
+
 
         // Cost
         auto cost = solution.obj_value;
