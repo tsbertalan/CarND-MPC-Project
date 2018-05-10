@@ -43,10 +43,11 @@ The main loop can be roughly described with five steps:
 1. Receive data from simulator. Data consists of
   a. x and y points for road center in map (global) coordinates, and
   b. current car (x, y, ψ, v)
-2. Make transformation from map to vehicle coordinates.
-3. Transform road center points to vehicle coordinates.
-4. Fit a polynomial in vehicle coordinates.
-5. Request MPC solution (d, a).
+2. Convert v from mi/h to m/s.
+3. Make transformation from map to vehicle coordinates.
+4. Transform road center points to vehicle coordinates.
+5. Fit a polynomial in vehicle coordinates.
+6. Request MPC solution (d, a).
 
 Computing MPC solution (and the projected solution) in vehicle coordinates
 helps to avoid singularities -- i.e., for short-time projections, 
@@ -174,8 +175,8 @@ to use something with higher-order accuracy, like a single Runge-Kutta step.
 As an aside, the same might be said for the projected trajectories
 used in the MPC objective function.
 
-Adding this adjustment made it possible to re-tune the objective function weights/coefficients to achieve a top speed of about 97 mph rather than 56
-(though the controller drops the speed as to low as 46 mph for the tight turns).
+Adding this adjustment made it possible to re-tune the objective function weights/coefficients to achieve a top speed of about 100 mph rather than 56
+(though the controller drops the speed as to low as 49 mph for the tight turns).
 
 An alternative method
 might be to add `(int) LATENCY/dt` dummy timesteps
