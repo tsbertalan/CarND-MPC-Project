@@ -230,6 +230,9 @@ int main() {
                     double psi = j[1]["psi"];
                     double v = j[1]["speed"];
 
+                    // Convert speed to meters/second
+                    v *= 5280. / 3.2808 / 3600.;
+
                     // Estimate a transformation from vehicle to map and v/v.
                     Transformation_Matrix vehicle2map(psi, px, py);
                     Transformation_Matrix map2vehicle = vehicle2map.inverse();
