@@ -21,7 +21,7 @@
 static const unsigned int poly_order = 3;
 // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
 // SUBMITTING.
-static const size_t LATENCY = 100;
+static const size_t LATENCY = 0;
 static const size_t MAX_DELAYS = 10;
 
 
@@ -152,6 +152,7 @@ public:
             dt_est += dt;
         }
         dt_est /= previous_delay_times.size();
+        //std::cout << "dt_est = " << dt_est << std::endl;
         return dt_est;
     }
 
