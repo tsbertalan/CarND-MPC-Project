@@ -14,16 +14,16 @@ using std::cout;
 //////// PARAMETERS ////////
 
 // Set the timestep length and duration
-static const size_t N = 16;
-static const double dt = 0.1;
+static const size_t N = 10;
+static const double dt = 0.16;
 
 // Set the target velocity (converted from mph to m/s)
-static const double ref_v = 150 * 5280. / 3.2808 / 3600.;
+static const double ref_v = 120 * 5280. / 3.2808 / 3600.;
 
 // Set the scaling factors for terms in the objective function.
-static const double scale_cte = 100;
-static const double scale_epsi = 600;
-static const double scale_v = .2;
+static const double scale_cte = 250;
+static const double scale_epsi = 500;
+static const double scale_v = .5;
 static const double scale_delta = 1e-5;
 static const double scale_a = .1;
 static const double scale_ddelta = 1e12;
